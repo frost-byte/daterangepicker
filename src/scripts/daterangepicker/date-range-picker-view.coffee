@@ -2,51 +2,19 @@ class DateRangePickerView
   constructor: (options = {}) ->
     new Config(options).extend(@)
 
-    @startCalendar = new CalendarView(@, @startDate, 'start')
-    @endCalendar = new CalendarView(@, @endDate, 'end')
+    @startSubscriber = {}
+    @endSubscriber = {}
+    @firstSubscriber = {}
+    @lastSubscriber = {}
+    @rangeSubscriber = {}
 
-    @startDateInput = @startCalendar.inputDate
-    @endDateInput = @endCalendar.inputDate
-    @dateRange = ko.observable([@startDate(), @endDate()])
-
-    @startDate.subscribe (newValue) =>
-      if @single()
-        @endDate(newValue.clone().endOf(@period()))
-        @updateDateRange()
-        @close()
-      else
-        if @endDate().isSame(newValue)
-          @endDate(@endDate().clone().endOf(@period()))
-        if @standalone()
-          @updateDateRange()
-
-    @endDate.subscribe (newValue) =>
-      if not @single() and @standalone()
-        @updateDateRange()
-
+    @startCalendar = {}
+    @endCalendar = {}
+    @startDateInput = {}
+    @endDateInput = {}
     @style = ko.observable({})
 
-    if @callback
-      @dateRange.subscribe (newValue) =>
-        [startDate, endDate] = newValue
-        @callback(
-          startDate.clone(),
-          endDate.clone(),
-          @period(),
-          @startCalendar.firstDate(),
-          @endCalendar.lastDate())
-      @startCalendar.firstDate.subscribe (newValue) =>
-        [startDate, endDate] = @dateRange()
-        @callback(startDate.clone(), endDate.clone(), @period(), newValue, @endCalendar.lastDate())
-      @endCalendar.lastDate.subscribe (newValue) =>
-        [startDate, endDate] = @dateRange()
-        @callback(
-          startDate.clone(), endDate.clone(), @period(), @startCalendar.firstDate(), newValue)
-      if @forceUpdate
-        [startDate, endDate] = @dateRange()
-        @callback(
-          startDate.clone(), endDate.clone(),
-          @period(), @startCalendar.firstDate(), @endCalendar.lastDate())
+    @setRangeFromExtent(@period())
 
     if @anchorElement
       wrapper = $("<div data-bind=\"stopBinding: true\"></div>").appendTo(@parentElement)
@@ -66,6 +34,69 @@ class DateRangePickerView
       @updatePosition()
 
   periodProxy: Period
+
+  setRangeFromExtent: (period) =>
+    @changeExtent(period)
+    @updatePeriod(period)
+
+    if @startSubscriber?.dispose
+      @startSubscriber.dispose()
+
+    if @endSubscriber?.dispose
+      @endSubscriber.dispose()
+
+    @startCalendar = new CalendarView(@, @startDate, 'start')
+    @endCalendar = new CalendarView(@, @endDate, 'end')
+    @startDateInput = @startCalendar.inputDate
+    @endDateInput = @endCalendar.inputDate
+
+    @startSubscriber = @startDate.subscribe (newValue) =>
+      if @single()
+        @endDate(newValue.clone().endOf(@period()))
+        @updateDateRange()
+        @close()
+      else
+        if @endDate().isSame(newValue)
+          @endDate(@endDate().clone().endOf(@period()))
+        if @standalone()
+          @updateDateRange()
+
+    @endSubscriber = @endDate.subscribe (newValue) =>
+      if not @single() and @standalone()
+        @updateDateRange()
+
+    @dateRange = ko.observable([@startDate(), @endDate()])
+
+    if @rangeSubscriber?.dispose
+      @rangeSubscriber.dispose()
+
+    if @firstSubscriber?.dispose
+      @firstSubscriber.dispose()
+
+    if @lastSubscriber?.dispose
+      @lastSubscriber.dispose()
+
+    if @callback
+      @rangeSubscriber = @dateRange.subscribe (newValue) =>
+        [startDate, endDate] = newValue
+        @callback(
+          startDate.clone(),
+          endDate.clone(),
+          @period(),
+          @startCalendar.firstDate(),
+          @endCalendar.lastDate())
+      @firstSubscriber = @startCalendar.firstDate.subscribe (newValue) =>
+        [startDate, endDate] = @dateRange()
+        @callback(startDate.clone(), endDate.clone(), @period(), newValue, @endCalendar.lastDate())
+      @lastSubscriber = @endCalendar.lastDate.subscribe (newValue) =>
+        [startDate, endDate] = @dateRange()
+        @callback(
+          startDate.clone(), endDate.clone(), @period(), @startCalendar.firstDate(), newValue)
+      if @forceUpdate
+        [startDate, endDate] = @dateRange()
+        @callback(
+          startDate.clone(), endDate.clone(),
+          @period(), @startCalendar.firstDate(), @endCalendar.lastDate())
 
   getLocale: () ->
     @locale
@@ -113,8 +144,12 @@ class DateRangePickerView
     @expanded(true)
 
   setPeriod: (period) ->
+    console.log """Period changed to #{period}."""
+
     @isCustomPeriodRangeActive(false)
+    @changeExtent(period)
     @period(period)
+
     @expanded(true)
 
   setDateRange: (dateRange) =>
@@ -123,7 +158,7 @@ class DateRangePickerView
     else
       @expanded(false)
       @close()
-      @period('day')
+      @changeExtent('day')
       @startDate(dateRange.startDate)
       @endDate(dateRange.endDate)
       @updateDateRange()

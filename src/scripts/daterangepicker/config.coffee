@@ -4,18 +4,21 @@ class Options
         @allEvents = options.allEvents || []
         @timeZone = options.timeZone || 'UTC'
         @periods = options.periods || Period.allPeriods
-        @customPeriodRanges = options.customPeriodRanges || {}
         @period = options.period || 'day'
+        @periodExtents = options.periodExtents || DateExtent.defaultExtents
+        @currentExtent = @periodExtents[@period] || DateExtent.defaultExtents['day']
+        @customPeriodRanges = options.customPeriodRanges || {}
         @single = options.single || false
         @opened = options.opened || false
+        @hideWeekends = options.hideWeekends || false
         @expanded = options.expanded || false
         @standalone = options.standalone || false
         @hideWeekdays = options.hideWeekdays || false
         @locale = options.locale || {}
         @orientation = options.orientation || 'right'
         @forceUpdate = options.forceUpdate || false
-        @minDate = options.minDate || moment().subtract(30, 'years')
-        @maxDate = options.maxDate || moment()
+        @minDate = @currentExtent.minDate || moment().subtract(30, 'years')
+        @maxDate = @currentExtent.maxDate || moment()
         @startDate = options.startDate || moment().subtract(29, 'days')
         @endDate = options.endDate || moment()
         @ranges = options.ranges || null
@@ -31,20 +34,24 @@ class Config
         @timeZone = @_timeZone(options.timeZone)
         @periods = @_periods(options.periods)
         @customPeriodRanges = @_customPeriodRanges(options.customPeriodRanges)
-        @period = @_period(options.period)
         @single = @_single(options.single)
         @opened = @_opened(options.opened)
+        @hideWeekends = @_hideWeekends(options.hideWeekends)
         @expanded = @_expanded(options.expanded)
         @standalone = @_standalone(options.standalone)
         @hideWeekdays = @_hideWeekdays(options.hideWeekdays)
         @locale = @_locale(options.locale)
         @orientation = @_orientation(options.orientation)
         @forceUpdate = options.forceUpdate
+        @periodExtents = @_periodExtents(options.periodExtents)
+        @period = @_period(options.period)
+        # @currentExtent = @_currentExtent(@periodExtents()[options.period])
+        @changeExtent(options.period)
 
-        @minDate = @_minDate(options.minDate)
-        @maxDate = @_maxDate(options.maxDate)
-        @startDate = @_startDate(options.startDate)
-        @endDate = @_endDate(options.endDate)
+        @minDate = @currentExtent().minDate
+        @maxDate = @currentExtent().maxDate
+        @startDate = @currentExtent().startDate
+        @endDate = @currentExtent().endDate
 
         @ranges = @_ranges(options.ranges)
         @isCustomPeriodRangeActive = ko.observable(false)
@@ -60,6 +67,23 @@ class Config
     extend: (obj) ->
         obj[k] = v for k, v of @ when @.hasOwnProperty(k) && k[0] != '_'
 
+    findExtent: (val) ->
+        if @periodExtents()[val]
+            @periodExtents()[val]
+        else
+            @periodExtents().day
+
+    changeExtent: (val) =>
+        @currentExtent = @_currentExtent(@findExtent(val))
+        @period = @_period(val)
+        @minDate = @currentExtent().minDate
+        @maxDate = @currentExtent().maxDate
+        @startDate = @currentExtent().startDate
+        @endDate = @currentExtent().endDate
+
+    updatePeriod: (val) =>
+        @_period(val)
+
     _firstDayOfWeek: (val) ->
         ko.observable(if val then val else 0) # default to Sunday (0)
 
@@ -71,6 +95,12 @@ class Config
 
     _periods: (val) ->
         ko.observableArray(val || Period.allPeriods)
+
+    _periodExtents: (val) ->
+        ko.observable(val || DateExtent.defaultExtents)
+
+    _currentExtent: (val) ->
+        ko.observable(val || DateExtent.defaultExtents['day'])
 
     _customPeriodRanges: (obj) ->
         obj ||= {}
@@ -88,6 +118,9 @@ class Config
     _opened: (val) ->
         ko.observable(val || false)
 
+    _hideWeekends: (val) ->
+        ko.observable(val || false)
+
     _expanded: (val) ->
         ko.observable(val || false)
 
@@ -97,37 +130,13 @@ class Config
     _hideWeekdays: (val) ->
         ko.observable(val || false)
 
-    _minDate: (val) ->
-        if val instanceof Array
-            [val, mode] = val
-        else if val instanceof Object
-            {val, mode} = val
-        val ||= moment().subtract(30, 'years')
-        @_dateObservable(val, mode)
-
-    _maxDate: (val) ->
-        if val instanceof Array
-            [val, mode] = val
-        else if val instanceof Object
-            {val, mode} = val
-        val ||= moment()
-        @_dateObservable(val, mode, @minDate)
-
-    _startDate: (val) ->
-        val ||= moment().subtract(29, 'days')
-        @_dateObservable(val, null, @minDate, @maxDate)
-
-    _endDate: (val) ->
-        val ||= moment()
-        @_dateObservable(val, null, @startDate, @maxDate)
-
     _ranges: (obj) ->
         obj ||= @_defaultRanges()
         throw new Error('Invalid ranges parameter (should be a plain object)') unless $.isPlainObject(obj)
         for title, value of obj
             switch value
                 when 'all-time'
-                    new AllTimeDateRange(title, @minDate().clone(), @maxDate().clone())
+                    new AllTimeDateRange(title, @currentExtent().minDate().clone(), @maxDate().clone())
                 when 'custom'
                     new CustomDateRange(title)
                 else
@@ -168,7 +177,7 @@ class Config
         computed = ko.computed
             read: ->
                 observable()
-            write: (newValue) =>
+            write: (newValue) ->
                 newValue = computed.fit(newValue)
                 oldValue = observable()
                 observable(newValue) unless oldValue && newValue.isSame(oldValue)
@@ -197,6 +206,10 @@ class Config
                 val = moment.min(max, val)
             val
 
+        isWeekday = (date) ->
+            val = (6 > date.day() > 0)
+            val
+
         computed.fit = (val) =>
             val = MomentUtil.tz(val, @timeZone())
             fitMax(fitMin(val))
@@ -215,7 +228,16 @@ class Config
             sameMax = date.isSame(max, @period())
             minExclusive = minBoundary.mode == 'exclusive'
             maxExclusive = maxBoundary.mode == 'exclusive'
-            between || (!minExclusive && sameMin && !(maxExclusive && sameMax)) || (!maxExclusive && sameMax && !(minExclusive && sameMin))
+            weekDay = isWeekday(date)
+            showWeekend = @period != 'day' || (weekDay ||
+            (
+                !weekDay &&
+                !@hideWeekends()
+            ))
+            (between ||
+            (!minExclusive && sameMin && !(maxExclusive && sameMax)) ||
+            (!maxExclusive && sameMax && !(minExclusive && sameMin))) &&
+            showWeekend
 
         if minBoundary
             computed.minBoundary = minBoundary
@@ -231,7 +253,7 @@ class Config
         {
             'Last 30 days': [moment().subtract(29, 'days'), moment()]
             'Last 90 days': [moment().subtract(89, 'days'), moment()]
-            'Last Year': [moment().subtract(1, 'year').add(1,'day'), moment()]
+            'Last Year': [moment().subtract(1, 'year').add(1, 'day'), moment()]
             'All Time': 'all-time'
             'Custom Range': 'custom'
         }

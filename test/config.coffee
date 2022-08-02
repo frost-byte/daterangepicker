@@ -1,4 +1,5 @@
 describe 'Config', ->
+  DateExtent = $.fn.daterangepicker.DateExtent
   Config = $.fn.daterangepicker.Config
   fmt = 'YYYY-MM-DD'
 
@@ -127,8 +128,14 @@ describe 'Config', ->
         describe 'inclusive mode', ->
           c = new Config({
             period: 'month'
-            minDate: [moment.utc('2015-05-14'), 'inclusive']
-            maxDate: [moment.utc('2016-01-01'), 'inclusive']
+            periodExtents: {
+              'month': new DateExtent({
+                  period: 'month'
+                  minDate: [moment.utc('2015-05-14'), 'inclusive']
+                  maxDate: [moment.utc('2016-01-01'), 'inclusive']
+                  hideWeekends: false
+                })
+              }
           })
 
           it 'converts 2015-04-15 into 2015-05-14', () ->
@@ -149,8 +156,14 @@ describe 'Config', ->
         describe 'exclusive mode', ->
           c = new Config({
             period: 'month'
-            minDate: [moment.utc('2015-05-14'), 'exclusive']
-            maxDate: [moment.utc('2016-01-01'), 'inclusive']
+            periodExtents: {
+              'month': new DateExtent({
+                  period: 'month'
+                  minDate: [moment.utc('2015-05-14'), 'exclusive']
+                  maxDate: [moment.utc('2016-01-01'), 'inclusive']
+                  hideWeekends: false
+                })
+              }
           })
 
           it 'converts 2015-04-15 into 2015-06-01', () ->
@@ -171,8 +184,14 @@ describe 'Config', ->
         describe 'extended mode', ->
           c = new Config({
             period: 'month'
-            minDate: [moment.utc('2015-05-14'), 'extended']
-            maxDate: [moment.utc('2016-01-01'), 'inclusive']
+            periodExtents: {
+              'month': new DateExtent({
+                  period: 'month'
+                  minDate: [moment.utc('2015-05-14'), 'extended']
+                  maxDate: [moment.utc('2016-01-01'), 'inclusive']
+                  hideWeekends: false
+                })
+              }
           })
 
           it 'converts 2015-04-15 into 2015-05-01', () ->
@@ -194,8 +213,14 @@ describe 'Config', ->
         describe 'inclusive mode', ->
           c = new Config({
             period: 'month'
-            minDate: [moment.utc('2014-01-01'), 'inclusive']
-            maxDate: [moment.utc('2015-05-14'), 'inclusive']
+            periodExtents: {
+              'month': new DateExtent({
+                  period: 'month'
+                  minDate: [moment.utc('2014-01-01'), 'inclusive']
+                  maxDate: [moment.utc('2015-05-14'), 'inclusive']
+                  hideWeekends: false
+                })
+              }
           })
 
           it 'converts 2015-04-15 into 2015-04-15', () ->
@@ -216,8 +241,14 @@ describe 'Config', ->
         describe 'exclusive mode', ->
           c = new Config({
             period: 'month'
-            minDate: [moment.utc('2014-01-01'), 'inclusive']
-            maxDate: [moment.utc('2015-05-14'), 'exclusive']
+            periodExtents: {
+              'month': new DateExtent({
+                  period: 'month'
+                  minDate: [moment.utc('2014-01-01'), 'inclusive']
+                  maxDate: [moment.utc('2015-05-14'), 'exclusive']
+                  hideWeekends: false
+                })
+              }
           })
 
           it 'converts 2015-04-15 into 2015-04-15', () ->
@@ -238,8 +269,14 @@ describe 'Config', ->
         describe 'extended mode', ->
           c = new Config({
             period: 'month'
-            minDate: [moment.utc('2014-01-01'), 'inclusive']
-            maxDate: [moment.utc('2015-05-14'), 'extended']
+            periodExtents: {
+              'month': new DateExtent({
+                  period: 'month'
+                  minDate: [moment.utc('2014-01-01'), 'inclusive']
+                  maxDate: [moment.utc('2015-05-14'), 'extended']
+                  hideWeekends: false
+                })
+              }
           })
 
           it 'converts 2015-04-15 into 2015-04-15', () ->
@@ -258,12 +295,35 @@ describe 'Config', ->
             assert.equal(c.startDate.fit('2015-06-15').format(fmt), '2015-05-31')
 
     describe '#isWithinBoundaries()', ->
+      describe 'minDate = 2015-05-14, period = day', ->
+        describe 'hideWeekends = true', ->
+          c = new Config({
+            period: 'day'
+            periodExtents: {
+              'day': new DateExtent({
+                  period: 'day'
+                  minDate: [moment.utc('2015-05-14'), 'inclusive']
+                  maxDate: [moment.utc('2016-01-01'), 'extended']
+                  hideWeekends: true
+                })
+              }
+          })
+
+          it 'returns false for 2015-05-16', () ->
+            assert.isFalse(c.startDate.isWithinBoundaries('2015-05-16'), '2015-05-16')
+
       describe 'minDate = 2015-05-14, period = month', ->
         describe 'inclusive mode', ->
           c = new Config({
             period: 'month'
-            minDate: [moment.utc('2015-05-14'), 'inclusive']
-            maxDate: [moment.utc('2016-01-01'), 'inclusive']
+            periodExtents: {
+              'month': new DateExtent({
+                  period: 'month'
+                  minDate: [moment.utc('2015-05-14'), 'inclusive']
+                  maxDate: [moment.utc('2016-01-01'), 'inclusive']
+                  hideWeekends: false
+                })
+              }
           })
 
           it 'returns false for 2015-04-15', () ->
@@ -284,8 +344,14 @@ describe 'Config', ->
         describe 'exclusive mode', ->
           c = new Config({
             period: 'month'
-            minDate: [moment.utc('2015-05-14'), 'exclusive']
-            maxDate: [moment.utc('2016-01-01'), 'inclusive']
+            periodExtents: {
+              'month': new DateExtent({
+                  period: 'month'
+                  minDate: [moment.utc('2015-05-14'), 'exclusive']
+                  maxDate: [moment.utc('2016-01-01'), 'inclusive']
+                  hideWeekends: false
+                })
+              }
           })
 
           it 'returns false for 2015-04-15', () ->
@@ -306,8 +372,14 @@ describe 'Config', ->
         describe 'extended mode', ->
           c = new Config({
             period: 'month'
-            minDate: [moment.utc('2015-05-14'), 'extended']
-            maxDate: [moment.utc('2016-01-01'), 'inclusive']
+            periodExtents: {
+              'month': new DateExtent({
+                  period: 'month'
+                  minDate: [moment.utc('2015-05-14'), 'extended']
+                  maxDate: [moment.utc('2016-01-01'), 'inclusive']
+                  hideWeekends: false
+                })
+              }
           })
 
           it 'returns false for 2015-04-15', () ->
@@ -329,8 +401,14 @@ describe 'Config', ->
         describe 'inclusive mode', ->
           c = new Config({
             period: 'month'
-            minDate: [moment.utc('2014-01-01'), 'inclusive']
-            maxDate: [moment.utc('2015-05-14'), 'inclusive']
+            periodExtents: {
+              'month': new DateExtent({
+                  period: 'month'
+                  minDate: [moment.utc('2014-01-01'), 'inclusive']
+                  maxDate: [moment.utc('2015-05-14'), 'inclusive']
+                  hideWeekends: false
+                })
+              }
           })
 
           it 'returns true for 2015-04-15', () ->
@@ -351,8 +429,14 @@ describe 'Config', ->
         describe 'exclusive mode', ->
           c = new Config({
             period: 'month'
-            minDate: [moment.utc('2014-01-01'), 'inclusive']
-            maxDate: [moment.utc('2015-05-14'), 'exclusive']
+            periodExtents: {
+              'month': new DateExtent({
+                  period: 'month'
+                  minDate: [moment.utc('2014-01-01'), 'inclusive']
+                  maxDate: [moment.utc('2015-05-14'), 'exclusive']
+                  hideWeekends: false
+                })
+              }
           })
 
           it 'returns true for 2015-04-15', () ->
@@ -373,8 +457,14 @@ describe 'Config', ->
         describe 'extended mode', ->
           c = new Config({
             period: 'month'
-            minDate: [moment.utc('2014-01-01'), 'inclusive']
-            maxDate: [moment.utc('2015-05-14'), 'extended']
+            periodExtents: {
+              'month': new DateExtent({
+                  period: 'month'
+                  minDate: [moment.utc('2014-01-01'), 'inclusive']
+                  maxDate: [moment.utc('2015-05-14'), 'extended']
+                  hideWeekends: false
+                })
+              }
           })
 
           it 'returns true for 2015-04-15', () ->

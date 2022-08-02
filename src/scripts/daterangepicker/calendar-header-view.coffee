@@ -27,7 +27,7 @@ class CalendarHeaderView
       read: =>
         @currentDate().year()
       write: (newValue) =>
-        newDate = @currentDate().clone().year(newValue)
+        newDate = @currentDate().clone().year(newValue || moment().year())
         unless newDate.isSame(@currentDate(), 'year')
           @currentDate(newDate)
       pure: true

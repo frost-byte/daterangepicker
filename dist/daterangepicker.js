@@ -1,6 +1,6 @@
 /*!
  * knockout-daterangepicker-fb
- * version: 0.4.1
+ * version: 0.5.0
  * authors: Sensor Tower team
  * license: MIT
  * https://sensortower.github.io/daterangepicker
@@ -12,10 +12,10 @@
     } else if (!(typeof exports === 'undefined') && exports === 'object') {
       return factory(require('moment'), require('knockout'), require('jquery'));
     } else {
-      return factory(root.moment, root.ko, root.jquery);
+      return factory(root.moment, root.ko, root.$);
     }
   })(this, function(moment, ko, $) {
-    var AllTimeDateRange, ArrayUtils, CalendarHeaderView, CalendarView, Config, CustomDateRange, DateRange, DateRangePickerView, MomentIterator, MomentUtil, Options, Period;
+    var AllTimeDateRange, ArrayUtils, CalendarHeaderView, CalendarView, Config, CustomDateRange, DateExtent, DateRange, DateRangePickerView, MomentIterator, MomentUtil, Options, Period;
     MomentUtil = class MomentUtil {
       static patchCurrentLocale(obj) {
         return moment.locale(moment.locale(), obj);
@@ -253,24 +253,174 @@
       return Period;
 
     }).call(this);
+    DateExtent = (function() {
+      class DateExtent {
+        constructor(options = {}) {
+          this.timeZone = this._timeZone(options.timeZone);
+          this.period = options.period;
+          this.minDate = this._minDate(options.minDate);
+          this.maxDate = this._maxDate(options.maxDate);
+          this.startDate = this._startDate(options.startDate);
+          this.endDate = this._endDate(options.endDate);
+          ({
+            _timeZone: function(val) {
+              return ko.observable(val || 'UTC');
+            },
+            _minDate: function(val) {
+              var mode;
+              if (val instanceof Array) {
+                [val, mode] = val;
+              } else if (val instanceof Object) {
+                ({val, mode} = val);
+              }
+              val || (val = moment().subtract(30, 'years'));
+              return this._dateObservable(val, mode);
+            },
+            _maxDate: function(val) {
+              var mode;
+              if (val instanceof Array) {
+                [val, mode] = val;
+              } else if (val instanceof Object) {
+                ({val, mode} = val);
+              }
+              val || (val = moment());
+              return this._dateObservable(val, mode, this.minDate);
+            },
+            _startDate: function(val) {
+              val || (val = moment().subtract(29, 'days'));
+              return this._dateObservable(val, null, this.currentExtent.minDate(), this.maxDate);
+            },
+            _endDate: function(val) {
+              val || (val = moment());
+              return this._dateObservable(val, null, this.startDate, this.maxDate);
+            },
+            _dateObservable: function(val, mode, minBoundary, maxBoundary) {
+              var computed, fitMax, fitMin, isWeekday, observable;
+              observable = ko.observable();
+              computed = ko.computed({
+                read: function() {
+                  return observable();
+                },
+                write: function(newValue) {
+                  var oldValue;
+                  newValue = computed.fit(newValue);
+                  oldValue = observable();
+                  if (!(oldValue && newValue.isSame(oldValue))) {
+                    return observable(newValue);
+                  }
+                }
+              });
+              computed.mode = mode || 'inclusive';
+              fitMin = (val) => {
+                var min;
+                if (minBoundary) {
+                  min = minBoundary();
+                  switch (minBoundary.mode) {
+                    case 'extended':
+                      min = min.clone().startOf(this.period);
+                      break;
+                    case 'exclusive':
+                      min = min.clone().endOf(this.period).add(1, 'millisecond');
+                  }
+                  val = moment.max(min, val);
+                }
+                return val;
+              };
+              fitMax = (val) => {
+                var max;
+                if (maxBoundary) {
+                  max = maxBoundary();
+                  switch (maxBoundary.mode) {
+                    case 'extended':
+                      max = max.clone().endOf(this.period);
+                      break;
+                    case 'exclusive':
+                      max = max.clone().startOf(this.period).subtract(1, 'millisecond');
+                  }
+                  val = moment.min(max, val);
+                }
+                return val;
+              };
+              isWeekday = function(date) {
+                var ref1;
+                val = (6 > (ref1 = date.day()) && ref1 > 0);
+                return val;
+              };
+              computed.fit = (val) => {
+                val = MomentUtil.tz(val, this.timeZone());
+                return fitMax(fitMin(val));
+              };
+              computed(val);
+              computed.clone = () => {
+                return this._dateObservable(observable(), computed.mode, minBoundary, maxBoundary);
+              };
+              computed.isWithinBoundaries = (date) => {
+                var between, max, maxExclusive, min, minExclusive, sameMax, sameMin, showWeekend, weekDay;
+                date = MomentUtil.tz(date, this.timeZone());
+                min = minBoundary();
+                max = maxBoundary();
+                between = date.isBetween(min, max, this.period);
+                sameMin = date.isSame(min, this.period);
+                sameMax = date.isSame(max, this.period);
+                minExclusive = minBoundary.mode === 'exclusive';
+                maxExclusive = maxBoundary.mode === 'exclusive';
+                weekDay = isWeekday(date);
+                showWeekend = weekDay || !weekDay && !this.hideWeekends();
+                return (between || (!minExclusive && sameMin && !(maxExclusive && sameMax)) || (!maxExclusive && sameMax && !(minExclusive && sameMin))) && showWeekend;
+              };
+              if (minBoundary) {
+                computed.minBoundary = minBoundary;
+                minBoundary.subscribe(function() {
+                  return computed(observable());
+                });
+              }
+              if (maxBoundary) {
+                computed.maxBoundary = maxBoundary;
+                maxBoundary.subscribe(function() {
+                  return computed(observable());
+                });
+              }
+              return computed;
+            }
+          });
+        }
+
+      };
+
+      DateExtent.defaultExtents = {
+        'day': new DateExtent({
+          'period': 'day',
+          'minDate': [moment().subtract(30, 'years')],
+          'maxDate': [moment()],
+          'startDate': [moment().subtract(29, 'days')],
+          'endDate': [moment()]
+        })
+      };
+
+      return DateExtent;
+
+    }).call(this);
     Options = class Options {
       constructor(options = {}) {
         this.firstDayOfWeek = options.firstDayOfWeek || 0;
         this.allEvents = options.allEvents || [];
         this.timeZone = options.timeZone || 'UTC';
         this.periods = options.periods || Period.allPeriods;
-        this.customPeriodRanges = options.customPeriodRanges || {};
         this.period = options.period || 'day';
+        this.periodExtents = options.periodExtents || DateExtent.defaultExtents;
+        this.currentExtent = this.periodExtents[this.period] || DateExtent.defaultExtents['day'];
+        this.customPeriodRanges = options.customPeriodRanges || {};
         this.single = options.single || false;
         this.opened = options.opened || false;
+        this.hideWeekends = options.hideWeekends || false;
         this.expanded = options.expanded || false;
         this.standalone = options.standalone || false;
         this.hideWeekdays = options.hideWeekdays || false;
         this.locale = options.locale || {};
         this.orientation = options.orientation || 'right';
         this.forceUpdate = options.forceUpdate || false;
-        this.minDate = options.minDate || moment().subtract(30, 'years');
-        this.maxDate = options.maxDate || moment();
+        this.minDate = this.currentExtent.minDate || moment().subtract(30, 'years');
+        this.maxDate = this.currentExtent.maxDate || moment();
         this.startDate = options.startDate || moment().subtract(29, 'days');
         this.endDate = options.endDate || moment();
         this.ranges = options.ranges || null;
@@ -288,19 +438,22 @@
         this.timeZone = this._timeZone(options.timeZone);
         this.periods = this._periods(options.periods);
         this.customPeriodRanges = this._customPeriodRanges(options.customPeriodRanges);
-        this.period = this._period(options.period);
         this.single = this._single(options.single);
         this.opened = this._opened(options.opened);
+        this.hideWeekends = this._hideWeekends(options.hideWeekends);
         this.expanded = this._expanded(options.expanded);
         this.standalone = this._standalone(options.standalone);
         this.hideWeekdays = this._hideWeekdays(options.hideWeekdays);
         this.locale = this._locale(options.locale);
         this.orientation = this._orientation(options.orientation);
         this.forceUpdate = options.forceUpdate;
-        this.minDate = this._minDate(options.minDate);
-        this.maxDate = this._maxDate(options.maxDate);
-        this.startDate = this._startDate(options.startDate);
-        this.endDate = this._endDate(options.endDate);
+        this.periodExtents = this._periodExtents(options.periodExtents);
+        this.currentExtent = this._currentExtent(options.currentExtent);
+        this.period = this._period(this.currentExtent().period);
+        this.minDate = this.currentExtent().minDate;
+        this.maxDate = this.currentExtent().maxDate;
+        this.startDate = this.currentExtent().startDate;
+        this.endDate = this.currentExtent().endDate;
         this.ranges = this._ranges(options.ranges);
         this.isCustomPeriodRangeActive = ko.observable(false);
         this.anchorElement = this._anchorElement(options.anchorElement);
@@ -325,6 +478,24 @@
         return results;
       }
 
+      findExtent(val) {
+        var ref1;
+        if ((ref1 = this.periodExtents()) != null ? ref1.val : void 0) {
+          return this.periodExtents().val;
+        } else {
+          return this.periodExtents().day;
+        }
+      }
+
+      changeExtent(val) {
+        this.currentExtent = this._currentExtent(this.findExtent(val));
+        this.period = this._period(this.currentExtent().period);
+        this.minDate = this.currentExtent().minDate;
+        this.maxDate = this.currentExtent().maxDate;
+        this.startDate = this.currentExtent().startDate;
+        return this.endDate = this.currentExtent().endDate;
+      }
+
       _firstDayOfWeek(val) {
         return ko.observable(val ? val : 0); // default to Sunday (0)
       }
@@ -339,6 +510,14 @@
 
       _periods(val) {
         return ko.observableArray(val || Period.allPeriods);
+      }
+
+      _periodExtents(val) {
+        return ko.observable(val || DateExtent.defaultExtents);
+      }
+
+      _currentExtent(val) {
+        return ko.observable(val || DateExtent.defaultExtents['day']);
       }
 
       _customPeriodRanges(obj) {
@@ -368,6 +547,10 @@
         return ko.observable(val || false);
       }
 
+      _hideWeekends(val) {
+        return ko.observable(val || false);
+      }
+
       _expanded(val) {
         return ko.observable(val || false);
       }
@@ -387,7 +570,7 @@
         } else if (val instanceof Object) {
           ({val, mode} = val);
         }
-        val || (val = moment().subtract(30, 'years'));
+        val || (val = this.currentExtent().minDate());
         return this._dateObservable(val, mode);
       }
 
@@ -399,17 +582,17 @@
           ({val, mode} = val);
         }
         val || (val = moment());
-        return this._dateObservable(val, mode, this.minDate);
+        return this._dateObservable(val, mode, this.currentExtent().minDate());
       }
 
       _startDate(val) {
         val || (val = moment().subtract(29, 'days'));
-        return this._dateObservable(val, null, this.minDate, this.maxDate);
+        return this._dateObservable(val, null, this.currentExtent().minDate(), this.currentExtent().maxDate());
       }
 
       _endDate(val) {
         val || (val = moment());
-        return this._dateObservable(val, null, this.startDate, this.maxDate);
+        return this._dateObservable(val, null, this.currentExtent().startDate(), this.currentExtent().maxDate());
       }
 
       _ranges(obj) {
@@ -423,7 +606,7 @@
           value = obj[title];
           switch (value) {
             case 'all-time':
-              results.push(new AllTimeDateRange(title, this.minDate().clone(), this.maxDate().clone()));
+              results.push(new AllTimeDateRange(title, this.currentExtent().minDate().clone(), this.maxDate().clone()));
               break;
             case 'custom':
               results.push(new CustomDateRange(title));
@@ -482,13 +665,13 @@
       }
 
       _dateObservable(val, mode, minBoundary, maxBoundary) {
-        var computed, fitMax, fitMin, observable;
+        var computed, fitMax, fitMin, isWeekday, observable;
         observable = ko.observable();
         computed = ko.computed({
           read: function() {
             return observable();
           },
-          write: (newValue) => {
+          write: function(newValue) {
             var oldValue;
             newValue = computed.fit(newValue);
             oldValue = observable();
@@ -528,6 +711,11 @@
           }
           return val;
         };
+        isWeekday = function(date) {
+          var ref1;
+          val = (6 > (ref1 = date.day()) && ref1 > 0);
+          return val;
+        };
         computed.fit = (val) => {
           val = MomentUtil.tz(val, this.timeZone());
           return fitMax(fitMin(val));
@@ -537,7 +725,7 @@
           return this._dateObservable(observable(), computed.mode, minBoundary, maxBoundary);
         };
         computed.isWithinBoundaries = (date) => {
-          var between, max, maxExclusive, min, minExclusive, sameMax, sameMin;
+          var between, max, maxExclusive, min, minExclusive, sameMax, sameMin, showWeekend, weekDay;
           date = MomentUtil.tz(date, this.timeZone());
           min = minBoundary();
           max = maxBoundary();
@@ -546,7 +734,9 @@
           sameMax = date.isSame(max, this.period());
           minExclusive = minBoundary.mode === 'exclusive';
           maxExclusive = maxBoundary.mode === 'exclusive';
-          return between || (!minExclusive && sameMin && !(maxExclusive && sameMax)) || (!maxExclusive && sameMax && !(minExclusive && sameMin));
+          weekDay = isWeekday(date);
+          showWeekend = weekDay || !weekDay && !this.hideWeekends();
+          return (between || (!minExclusive && sameMin && !(maxExclusive && sameMax)) || (!maxExclusive && sameMax && !(minExclusive && sameMin))) && showWeekend;
         };
         if (minBoundary) {
           computed.minBoundary = minBoundary;
@@ -955,16 +1145,38 @@
     DateRangePickerView = (function() {
       class DateRangePickerView {
         constructor(options = {}) {
-          var endDate, startDate, wrapper;
+          var wrapper;
+          this.setRangeFromExtent = this.setRangeFromExtent.bind(this);
           this.setDateRange = this.setDateRange.bind(this);
           this.setCustomPeriodRange = this.setCustomPeriodRange.bind(this);
           this.outsideClick = this.outsideClick.bind(this);
           new Config(options).extend(this);
           this.startCalendar = new CalendarView(this, this.startDate, 'start');
           this.endCalendar = new CalendarView(this, this.endDate, 'end');
+          this.style = ko.observable({});
           this.startDateInput = this.startCalendar.inputDate;
           this.endDateInput = this.endCalendar.inputDate;
-          this.dateRange = ko.observable([this.startDate(), this.endDate()]);
+          this.setRangeFromExtent(this.period());
+          if (this.anchorElement) {
+            wrapper = $("<div data-bind=\"stopBinding: true\"></div>").appendTo(this.parentElement);
+            this.containerElement = $(this.constructor.template).appendTo(wrapper);
+            ko.applyBindings(this, this.containerElement.get(0));
+            this.anchorElement.click(() => {
+              this.updatePosition();
+              return this.toggle();
+            });
+            if (!this.standalone()) {
+              $(document).on('mousedown.daterangepicker', this.outsideClick).on('touchend.daterangepicker', this.outsideClick).on('click.daterangepicker', '[data-toggle=dropdown]', this.outsideClick).on('focusin.daterangepicker', this.outsideClick);
+            }
+          }
+          if (this.opened()) {
+            this.updatePosition();
+          }
+        }
+
+        setRangeFromExtent(period) {
+          var endDate, startDate;
+          this.changeExtent(period);
           this.startDate.subscribe((newValue) => {
             if (this.single()) {
               this.endDate(newValue.clone().endOf(this.period()));
@@ -984,7 +1196,7 @@
               return this.updateDateRange();
             }
           });
-          this.style = ko.observable({});
+          this.dateRange = ko.observable([this.startDate(), this.endDate()]);
           if (this.callback) {
             this.dateRange.subscribe((newValue) => {
               var endDate, startDate;
@@ -1003,23 +1215,8 @@
             });
             if (this.forceUpdate) {
               [startDate, endDate] = this.dateRange();
-              this.callback(startDate.clone(), endDate.clone(), this.period(), this.startCalendar.firstDate(), this.endCalendar.lastDate());
+              return this.callback(startDate.clone(), endDate.clone(), this.period(), this.startCalendar.firstDate(), this.endCalendar.lastDate());
             }
-          }
-          if (this.anchorElement) {
-            wrapper = $("<div data-bind=\"stopBinding: true\"></div>").appendTo(this.parentElement);
-            this.containerElement = $(this.constructor.template).appendTo(wrapper);
-            ko.applyBindings(this, this.containerElement.get(0));
-            this.anchorElement.click(() => {
-              this.updatePosition();
-              return this.toggle();
-            });
-            if (!this.standalone()) {
-              $(document).on('mousedown.daterangepicker', this.outsideClick).on('touchend.daterangepicker', this.outsideClick).on('click.daterangepicker', '[data-toggle=dropdown]', this.outsideClick).on('focusin.daterangepicker', this.outsideClick);
-            }
-          }
-          if (this.opened()) {
-            this.updatePosition();
           }
         }
 
@@ -1088,8 +1285,9 @@
         }
 
         setPeriod(period) {
+          console.log(`Period changed to ${period}.`);
           this.isCustomPeriodRangeActive(false);
-          this.period(period);
+          this.changeExtent(period);
           return this.expanded(true);
         }
 
@@ -1099,7 +1297,7 @@
           } else {
             this.expanded(false);
             this.close();
-            this.period('day');
+            this.changeExtent('day');
             this.startDate(dateRange.startDate);
             this.endDate(dateRange.endDate);
             return this.updateDateRange();

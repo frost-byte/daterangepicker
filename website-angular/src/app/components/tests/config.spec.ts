@@ -352,6 +352,20 @@ export function doTests() {
             });
 
             describe('#isWithinBoundaries()', function() {
+                describe('minDate = 2015-05-14, period = day', function() {
+
+                    describe('inclusive mode', function() {
+                        const c = new Config({
+                            period: 'day',
+                            hideWeekends: false,
+                            minDate: [moment.utc('2015-05-14')],
+                            maxDate: [moment.utc('2016-01-01')]
+                        });
+
+                        it('returns false for 2015-05-16', function() {
+                            assert.isFalse(c.startDate.isWithinBoundaries('2015-05-16'), '2015-05-16');
+                        });
+
                 describe('minDate = 2015-05-14, period = month', function() {
 
                     describe('inclusive mode', function() {

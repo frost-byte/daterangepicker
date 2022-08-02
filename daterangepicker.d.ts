@@ -134,6 +134,20 @@ export interface DateRangeInterface {
     endDate?: string | Moment;
 }
 
+export interface DateExtentInterface {
+    timeZone?: string;
+    period?: string;
+    minDate?: Moment;
+    maxDate?: Moment;
+    startDate?: Moment;
+    endDate?: Moment;
+    hideWeekends?: boolean;
+}
+
+export class DateExtent implements DateExtentInterface {
+    constructor(...options: any[])
+}
+
 export class DateRange implements DateRangeInterface {
     constructor(title?: string, startDate?: string | Moment, endDate?: string | Moment);
     title?: string;
@@ -172,6 +186,7 @@ export class Options {
     single?: boolean;
     orientation?: string;
     opened?: boolean;
+    hideWeekends?: boolean;
     expanded?: boolean;
     standalone?: boolean;
     hideWeekdays?: boolean;
@@ -197,6 +212,7 @@ export class Config {
     single?: Observable<boolean>;
     orientation?: Observable<string>;
     opened?: Observable<boolean>;
+    hideWeekends?: Observable<boolean>;
     expanded?: Observable<boolean>;
     standalone?: Observable<boolean>;
     hideWeekdays?: Observable<boolean>;
@@ -220,6 +236,7 @@ export class Config {
     _period?(val: any): Observable<Period>;
     _single?(isSingle: boolean): Observable<boolean>;
     _opened?(isOpened: boolean): Observable<boolean>;
+    _hideWeekends?(shouldShow: boolean): Observable<boolean>;
     _expanded?(isExpanded: boolean): Observable<boolean>;
     _standalone?(isStandalone: boolean): Observable<boolean>;
     _hideWeekdays?(hideWeekdays: boolean): Observable<boolean>;
