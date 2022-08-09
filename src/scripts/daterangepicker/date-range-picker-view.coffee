@@ -86,12 +86,20 @@ class DateRangePickerView
           @startCalendar.firstDate(),
           @endCalendar.lastDate())
       @firstSubscriber = @startCalendar.firstDate.subscribe (newValue) =>
-        [startDate, endDate] = @dateRange()
-        @callback(startDate.clone(), endDate.clone(), @period(), newValue, @endCalendar.lastDate())
+        if not @single()
+          [startDate, endDate] = @dateRange()
+          @callback(
+            startDate.clone(),
+            endDate.clone(),
+            @period(),
+            newValue,
+            @endCalendar.lastDate()
+          )
       @lastSubscriber = @endCalendar.lastDate.subscribe (newValue) =>
-        [startDate, endDate] = @dateRange()
-        @callback(
-          startDate.clone(), endDate.clone(), @period(), @startCalendar.firstDate(), newValue)
+        if not @single()
+          [startDate, endDate] = @dateRange()
+          @callback(
+            startDate.clone(), endDate.clone(), @period(), @startCalendar.firstDate(), newValue)
       if @forceUpdate
         [startDate, endDate] = @dateRange()
         @callback(
@@ -147,7 +155,11 @@ class DateRangePickerView
     console.log """Period changed to #{period}."""
 
     @isCustomPeriodRangeActive(false)
-    @changeExtent(period)
+    @currentExtent(@periodExtents()[period])
+    @minDate = @currentExtent().minDate
+    @maxDate = @currentExtent().maxDate
+    @startDate = @currentExtent().startDate
+    @endDate = @currentExtent().endDate
     @period(period)
 
     @expanded(true)

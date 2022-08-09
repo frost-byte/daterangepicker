@@ -1,6 +1,6 @@
 /*!
  * knockout-daterangepicker-fb
- * version: 0.5.1
+ * version: 0.5.2
  * authors: Sensor Tower team
  * license: MIT
  * https://sensortower.github.io/daterangepicker
@@ -488,7 +488,6 @@
         this.forceUpdate = options.forceUpdate;
         this.periodExtents = this._periodExtents(options.periodExtents);
         this.period = this._period(options.period);
-        // @currentExtent = @_currentExtent(@periodExtents()[options.period])
         this.changeExtent(options.period);
         this.minDate = this.currentExtent().minDate;
         this.maxDate = this.currentExtent().maxDate;
@@ -1241,13 +1240,17 @@
             });
             this.firstSubscriber = this.startCalendar.firstDate.subscribe((newValue) => {
               var endDate, startDate;
-              [startDate, endDate] = this.dateRange();
-              return this.callback(startDate.clone(), endDate.clone(), this.period(), newValue, this.endCalendar.lastDate());
+              if (!this.single()) {
+                [startDate, endDate] = this.dateRange();
+                return this.callback(startDate.clone(), endDate.clone(), this.period(), newValue, this.endCalendar.lastDate());
+              }
             });
             this.lastSubscriber = this.endCalendar.lastDate.subscribe((newValue) => {
               var endDate, startDate;
-              [startDate, endDate] = this.dateRange();
-              return this.callback(startDate.clone(), endDate.clone(), this.period(), this.startCalendar.firstDate(), newValue);
+              if (!this.single()) {
+                [startDate, endDate] = this.dateRange();
+                return this.callback(startDate.clone(), endDate.clone(), this.period(), this.startCalendar.firstDate(), newValue);
+              }
             });
             if (this.forceUpdate) {
               [startDate, endDate] = this.dateRange();
@@ -1323,7 +1326,11 @@
         setPeriod(period) {
           console.log(`Period changed to ${period}.`);
           this.isCustomPeriodRangeActive(false);
-          this.changeExtent(period);
+          this.currentExtent(this.periodExtents()[period]);
+          this.minDate = this.currentExtent().minDate;
+          this.maxDate = this.currentExtent().maxDate;
+          this.startDate = this.currentExtent().startDate;
+          this.endDate = this.currentExtent().endDate;
           this.period(period);
           return this.expanded(true);
         }

@@ -45,7 +45,6 @@ class Config
         @forceUpdate = options.forceUpdate
         @periodExtents = @_periodExtents(options.periodExtents)
         @period = @_period(options.period)
-        # @currentExtent = @_currentExtent(@periodExtents()[options.period])
         @changeExtent(options.period)
 
         @minDate = @currentExtent().minDate
