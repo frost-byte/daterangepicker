@@ -1,6 +1,6 @@
 /*!
  * knockout-daterangepicker-fb
- * version: 0.5.2
+ * version: 0.5.3
  * authors: Sensor Tower team
  * license: MIT
  * https://sensortower.github.io/daterangepicker
@@ -256,142 +256,16 @@
     DateExtent = (function() {
       class DateExtent {
         constructor(options = {}) {
-          this.timeZone = this._timeZone(options.timeZone || 'UTC');
           this.period = options.period;
-          this.minDate = this._minDate(options.minDate);
-          this.maxDate = this._maxDate(options.maxDate);
-          this.startDate = this._startDate(options.startDate);
-          this.endDate = this._endDate(options.endDate);
-          this.hideWeekends = this._hideWeekends(options.hideWeekends);
+          this.minDate = options.minDate;
+          this.maxDate = options.maxDate;
+          this.startDate = options.startDate;
+          this.endDate = options.endDate;
+          this.hideWeekends = options.hideWeekends;
         }
 
         _hideWeekends(val) {
           return ko.observable(val || false);
-        }
-
-        _timeZone(val) {
-          return ko.observable(val || 'UTC');
-        }
-
-        _minDate(val) {
-          var mode;
-          if (val instanceof Array) {
-            [val, mode] = val;
-          } else if (val instanceof Object) {
-            ({val, mode} = val);
-          }
-          val || (val = moment().subtract(30, 'years'));
-          return this._dateObservable(val, mode);
-        }
-
-        _maxDate(val) {
-          var mode;
-          if (val instanceof Array) {
-            [val, mode] = val;
-          } else if (val instanceof Object) {
-            ({val, mode} = val);
-          }
-          val || (val = moment());
-          return this._dateObservable(val, mode, this.minDate);
-        }
-
-        _startDate(val) {
-          val || (val = moment().subtract(29, 'days'));
-          return this._dateObservable(val, null, this.minDate, this.maxDate);
-        }
-
-        _endDate(val) {
-          val || (val = moment());
-          return this._dateObservable(val, null, this.startDate, this.maxDate);
-        }
-
-        _dateObservable(val, mode, minBoundary, maxBoundary) {
-          var computed, fitMax, fitMin, isWeekday, observable;
-          observable = ko.observable();
-          computed = ko.computed({
-            read: function() {
-              return observable();
-            },
-            write: function(newValue) {
-              var oldValue;
-              newValue = computed.fit(newValue);
-              oldValue = observable();
-              if (!(oldValue && newValue.isSame(oldValue))) {
-                return observable(newValue);
-              }
-            }
-          });
-          computed.mode = mode || 'inclusive';
-          fitMin = (val) => {
-            var min;
-            if (minBoundary) {
-              min = minBoundary();
-              switch (minBoundary.mode) {
-                case 'extended':
-                  min = min.clone().startOf(this.period);
-                  break;
-                case 'exclusive':
-                  min = min.clone().endOf(this.period).add(1, 'millisecond');
-              }
-              val = moment.max(min, val);
-            }
-            return val;
-          };
-          fitMax = (val) => {
-            var max;
-            if (maxBoundary) {
-              max = maxBoundary();
-              switch (maxBoundary.mode) {
-                case 'extended':
-                  max = max.clone().endOf(this.period);
-                  break;
-                case 'exclusive':
-                  max = max.clone().startOf(this.period).subtract(1, 'millisecond');
-              }
-              val = moment.min(max, val);
-            }
-            return val;
-          };
-          isWeekday = function(date) {
-            var ref1;
-            val = (6 > (ref1 = date.day()) && ref1 > 0);
-            return val;
-          };
-          computed.fit = (val) => {
-            val = MomentUtil.tz(val, this.timeZone());
-            return fitMax(fitMin(val));
-          };
-          computed(val);
-          computed.clone = () => {
-            return this._dateObservable(observable(), computed.mode, minBoundary, maxBoundary);
-          };
-          computed.isWithinBoundaries = (date) => {
-            var between, max, maxExclusive, min, minExclusive, sameMax, sameMin, showWeekend, weekDay;
-            date = MomentUtil.tz(date, this.timeZone());
-            min = minBoundary();
-            max = maxBoundary();
-            between = date.isBetween(min, max, this.period);
-            sameMin = date.isSame(min, this.period);
-            sameMax = date.isSame(max, this.period);
-            minExclusive = minBoundary.mode === 'exclusive';
-            maxExclusive = maxBoundary.mode === 'exclusive';
-            weekDay = isWeekday(date);
-            showWeekend = this.period !== 'day' || (weekDay || (!weekDay && !this.hideWeekends()));
-            return (between || (!minExclusive && sameMin && !(maxExclusive && sameMax)) || (!maxExclusive && sameMax && !(minExclusive && sameMin))) && showWeekend;
-          };
-          if (minBoundary) {
-            computed.minBoundary = minBoundary;
-            minBoundary.subscribe(function() {
-              return computed(observable());
-            });
-          }
-          if (maxBoundary) {
-            computed.maxBoundary = maxBoundary;
-            maxBoundary.subscribe(function() {
-              return computed(observable());
-            });
-          }
-          return computed;
         }
 
       };
@@ -401,36 +275,36 @@
           'period': 'day',
           'minDate': [moment().subtract(30, 'years')],
           'maxDate': [moment()],
-          'startDate': [moment().subtract(29, 'days')],
-          'endDate': [moment()]
+          'startDate': moment().subtract(29, 'days'),
+          'endDate': moment()
         }),
         'week': new DateExtent({
           'period': 'week',
           'minDate': [moment().subtract(30, 'years')],
           'maxDate': [moment()],
-          'startDate': [moment().subtract(29, 'days')],
-          'endDate': [moment()]
+          'startDate': moment().subtract(29, 'days'),
+          'endDate': moment()
         }),
         'month': new DateExtent({
           'period': 'month',
           'minDate': [moment().subtract(30, 'years')],
           'maxDate': [moment()],
-          'startDate': [moment().subtract(29, 'days')],
-          'endDate': [moment()]
+          'startDate': moment().subtract(29, 'days'),
+          'endDate': moment()
         }),
         'quarter': new DateExtent({
           'period': 'quarter',
           'minDate': [moment().subtract(30, 'years')],
           'maxDate': [moment()],
-          'startDate': [moment().subtract(29, 'days')],
-          'endDate': [moment()]
+          'startDate': moment().subtract(29, 'days'),
+          'endDate': moment()
         }),
         'year': new DateExtent({
           'period': 'year',
           'minDate': [moment().subtract(30, 'years')],
           'maxDate': [moment()],
-          'startDate': [moment().subtract(29, 'days')],
-          'endDate': [moment()]
+          'startDate': moment().subtract(29, 'days'),
+          'endDate': moment()
         })
       };
 
@@ -489,10 +363,6 @@
         this.periodExtents = this._periodExtents(options.periodExtents);
         this.period = this._period(options.period);
         this.changeExtent(options.period);
-        this.minDate = this.currentExtent().minDate;
-        this.maxDate = this.currentExtent().maxDate;
-        this.startDate = this.currentExtent().startDate;
-        this.endDate = this.currentExtent().endDate;
         this.ranges = this._ranges(options.ranges);
         this.isCustomPeriodRangeActive = ko.observable(false);
         this.anchorElement = this._anchorElement(options.anchorElement);
@@ -526,12 +396,17 @@
       }
 
       changeExtent(val) {
+        val || (val = this.periods()[0]);
+        if (val !== 'day' && val !== 'week' && val !== 'month' && val !== 'quarter' && val !== 'year') {
+          throw new Error('Invalid period');
+        }
         this.currentExtent = this._currentExtent(this.findExtent(val));
-        this.period = this._period(val);
-        this.minDate = this.currentExtent().minDate;
-        this.maxDate = this.currentExtent().maxDate;
-        this.startDate = this.currentExtent().startDate;
-        return this.endDate = this.currentExtent().endDate;
+        this.minDate = this._minDate(this.currentExtent().minDate);
+        this.maxDate = this._maxDate(this.currentExtent().maxDate);
+        this.startDate = this._startDate(this.currentExtent().startDate);
+        this.endDate = this._endDate(this.currentExtent().endDate);
+        this.hideWeekends = this._hideWeekends(this.currentExtent().hideWeekends);
+        return this.period = this._period(val);
       }
 
       updatePeriod(val) {
@@ -605,6 +480,38 @@
         return ko.observable(val || false);
       }
 
+      _minDate(val) {
+        var mode;
+        if (val instanceof Array) {
+          [val, mode] = val;
+        } else if (val instanceof Object) {
+          ({val, mode} = val);
+        }
+        val || (val = moment().subtract(30, 'years'));
+        return this._dateObservable(val, mode);
+      }
+
+      _maxDate(val) {
+        var mode;
+        if (val instanceof Array) {
+          [val, mode] = val;
+        } else if (val instanceof Object) {
+          ({val, mode} = val);
+        }
+        val || (val = moment());
+        return this._dateObservable(val, mode, this.minDate);
+      }
+
+      _startDate(val) {
+        val || (val = moment().subtract(29, 'days'));
+        return this._dateObservable(val, null, this.minDate, this.maxDate);
+      }
+
+      _endDate(val) {
+        val || (val = moment());
+        return this._dateObservable(val, null, this.startDate, this.maxDate);
+      }
+
       _ranges(obj) {
         var results, title, value;
         obj || (obj = this._defaultRanges());
@@ -616,7 +523,7 @@
           value = obj[title];
           switch (value) {
             case 'all-time':
-              results.push(new AllTimeDateRange(title, this.currentExtent().minDate().clone(), this.maxDate().clone()));
+              results.push(new AllTimeDateRange(title, this.minDate().clone(), this.maxDate().clone()));
               break;
             case 'custom':
               results.push(new CustomDateRange(title));
@@ -745,7 +652,7 @@
           minExclusive = minBoundary.mode === 'exclusive';
           maxExclusive = maxBoundary.mode === 'exclusive';
           weekDay = isWeekday(date);
-          showWeekend = this.period !== 'day' || (weekDay || (!weekDay && !this.hideWeekends()));
+          showWeekend = this.period() !== 'day' || (weekDay || (!weekDay && !this.hideWeekends()));
           return (between || (!minExclusive && sameMin && !(maxExclusive && sameMax)) || (!maxExclusive && sameMax && !(minExclusive && sameMin))) && showWeekend;
         };
         if (minBoundary) {
@@ -1326,11 +1233,7 @@
         setPeriod(period) {
           console.log(`Period changed to ${period}.`);
           this.isCustomPeriodRangeActive(false);
-          this.currentExtent(this.periodExtents()[period]);
-          this.minDate = this.currentExtent().minDate;
-          this.maxDate = this.currentExtent().maxDate;
-          this.startDate = this.currentExtent().startDate;
-          this.endDate = this.currentExtent().endDate;
+          this.changeExtent(period);
           this.period(period);
           return this.expanded(true);
         }

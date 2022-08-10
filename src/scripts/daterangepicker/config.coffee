@@ -47,11 +47,6 @@ class Config
         @period = @_period(options.period)
         @changeExtent(options.period)
 
-        @minDate = @currentExtent().minDate
-        @maxDate = @currentExtent().maxDate
-        @startDate = @currentExtent().startDate
-        @endDate = @currentExtent().endDate
-
         @ranges = @_ranges(options.ranges)
         @isCustomPeriodRangeActive = ko.observable(false)
 
@@ -73,12 +68,15 @@ class Config
             @periodExtents().day
 
     changeExtent: (val) =>
+        val ||= @periods()[0]
+        throw new Error('Invalid period') unless val in ['day', 'week', 'month', 'quarter', 'year']
         @currentExtent = @_currentExtent(@findExtent(val))
+        @minDate = @_minDate(@currentExtent().minDate)
+        @maxDate = @_maxDate(@currentExtent().maxDate)
+        @startDate = @_startDate(@currentExtent().startDate)
+        @endDate = @_endDate(@currentExtent().endDate)
+        @hideWeekends = @_hideWeekends(@currentExtent().hideWeekends)
         @period = @_period(val)
-        @minDate = @currentExtent().minDate
-        @maxDate = @currentExtent().maxDate
-        @startDate = @currentExtent().startDate
-        @endDate = @currentExtent().endDate
 
     updatePeriod: (val) =>
         @_period(val)
@@ -129,13 +127,37 @@ class Config
     _hideWeekdays: (val) ->
         ko.observable(val || false)
 
+    _minDate: (val) ->
+        if val instanceof Array
+            [val, mode] = val
+        else if val instanceof Object
+            { val, mode } = val
+        val ||= moment().subtract(30, 'years')
+        @_dateObservable(val, mode)
+
+    _maxDate: (val) ->
+        if val instanceof Array
+            [val, mode] = val
+        else if val instanceof Object
+            { val, mode } = val
+        val ||= moment()
+        @_dateObservable(val, mode, @minDate)
+
+    _startDate: (val) ->
+        val ||= moment().subtract(29, 'days')
+        @_dateObservable(val, null, @minDate, @maxDate)
+
+    _endDate: (val) ->
+        val ||= moment()
+        @_dateObservable(val, null, @startDate, @maxDate)
+
     _ranges: (obj) ->
         obj ||= @_defaultRanges()
         throw new Error('Invalid ranges parameter (should be a plain object)') unless $.isPlainObject(obj)
         for title, value of obj
             switch value
                 when 'all-time'
-                    new AllTimeDateRange(title, @currentExtent().minDate().clone(), @maxDate().clone())
+                    new AllTimeDateRange(title, @minDate().clone(), @maxDate().clone())
                 when 'custom'
                     new CustomDateRange(title)
                 else
@@ -228,7 +250,7 @@ class Config
             minExclusive = minBoundary.mode == 'exclusive'
             maxExclusive = maxBoundary.mode == 'exclusive'
             weekDay = isWeekday(date)
-            showWeekend = @period != 'day' || (weekDay ||
+            showWeekend = @period() != 'day' || (weekDay ||
             (
                 !weekDay &&
                 !@hideWeekends()
