@@ -77,6 +77,15 @@ class Config
         @endDate = @_endDate(@currentExtent().endDate)
         @hideWeekends = @_hideWeekends(@currentExtent().hideWeekends)
         @period = @_period(val)
+        {
+            currentExtent: @currentExtent,
+            minDate: @minDate,
+            maxDate: @maxDate,
+            startDate: @startDate,
+            endDate: @endDate,
+            hideWeekends: @hideWeekends
+            period: @period
+        }
 
     updatePeriod: (val) =>
         @_period(val)

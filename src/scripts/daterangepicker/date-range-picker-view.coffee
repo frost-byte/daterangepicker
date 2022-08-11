@@ -155,7 +155,14 @@ class DateRangePickerView
     console.log """Period changed to #{period}."""
 
     @isCustomPeriodRangeActive(false)
-    @changeExtent(period)
+    {
+      @currentExtent,
+      @minDate,
+      @maxDate,
+      @startDate,
+      @endDate,
+      @hideWeekends
+    } = @changeExtent(period)
     @period(period)
 
     @expanded(true)

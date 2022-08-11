@@ -1,6 +1,6 @@
 /*!
  * knockout-daterangepicker-fb
- * version: 0.5.4
+ * version: 0.5.5
  * authors: Sensor Tower team
  * license: MIT
  * https://sensortower.github.io/daterangepicker
@@ -406,7 +406,16 @@
         this.startDate = this._startDate(this.currentExtent().startDate);
         this.endDate = this._endDate(this.currentExtent().endDate);
         this.hideWeekends = this._hideWeekends(this.currentExtent().hideWeekends);
-        return this.period = this._period(val);
+        this.period = this._period(val);
+        return {
+          currentExtent: this.currentExtent,
+          minDate: this.minDate,
+          maxDate: this.maxDate,
+          startDate: this.startDate,
+          endDate: this.endDate,
+          hideWeekends: this.hideWeekends,
+          period: this.period
+        };
       }
 
       updatePeriod(val) {
@@ -1233,7 +1242,7 @@
         setPeriod(period) {
           console.log(`Period changed to ${period}.`);
           this.isCustomPeriodRangeActive(false);
-          this.changeExtent(period);
+          ({currentExtent: this.currentExtent, minDate: this.minDate, maxDate: this.maxDate, startDate: this.startDate, endDate: this.endDate, hideWeekends: this.hideWeekends} = this.changeExtent(period));
           this.period(period);
           return this.expanded(true);
         }
