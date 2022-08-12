@@ -54,14 +54,15 @@ class DateRangePickerView
       newEnd = {}
       newStart = newValue
 
-      unless not newStart.length?
+      if newStart.length?
         newStart = newValue[0]
 
       if @single()
         if newStart.format() == @startCalendar.activeDate().format()
           newStart = @startCalendar.activeDate().startOf(@period())
-          newEnd = newStart.clone().endOf(@period())
-        @endDate(newValue.clone().endOf(@period()))
+
+        newEnd = newStart.clone().endOf(@period())
+        @endDate(newEnd.clone().endOf(@period()))
         @updateDateRange()
         @close()
       else
@@ -89,7 +90,8 @@ class DateRangePickerView
       @rangeSubscriber = @dateRange.subscribe (newValue) =>
         [startDate, endDate] = newValue
 
-        startDate = @startCalendar.activeDate().clone().startOf(@period())
+        if startDate.format() == @startCalendar.activeDate().format()
+          startDate = @startCalendar.activeDate().clone().startOf(@period())
 
         if @single
           endDate = startDate.clone().endOf(@period)

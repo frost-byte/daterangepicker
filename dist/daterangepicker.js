@@ -1,6 +1,6 @@
 /*!
  * knockout-daterangepicker-fb
- * version: 0.5.6
+ * version: 0.5.7
  * authors: Sensor Tower team
  * license: MIT
  * https://sensortower.github.io/daterangepicker
@@ -1123,15 +1123,15 @@
             var newEnd, newStart;
             newEnd = {};
             newStart = newValue;
-            if (newStart.length == null) {
+            if (newStart.length != null) {
               newStart = newValue[0];
             }
             if (this.single()) {
               if (newStart.format() === this.startCalendar.activeDate().format()) {
                 newStart = this.startCalendar.activeDate().startOf(this.period());
-                newEnd = newStart.clone().endOf(this.period());
               }
-              this.endDate(newValue.clone().endOf(this.period()));
+              newEnd = newStart.clone().endOf(this.period());
+              this.endDate(newEnd.clone().endOf(this.period()));
               this.updateDateRange();
               return this.close();
             } else {
@@ -1162,7 +1162,9 @@
             this.rangeSubscriber = this.dateRange.subscribe((newValue) => {
               var endDate, startDate;
               [startDate, endDate] = newValue;
-              startDate = this.startCalendar.activeDate().clone().startOf(this.period());
+              if (startDate.format() === this.startCalendar.activeDate().format()) {
+                startDate = this.startCalendar.activeDate().clone().startOf(this.period());
+              }
               if (this.single) {
                 endDate = startDate.clone().endOf(this.period);
                 this.endDate(endDate);
