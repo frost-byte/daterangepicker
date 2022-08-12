@@ -186,7 +186,7 @@ class DateRangePickerView
       @hideWeekends
     } = @changeExtent(period)
     @period(period)
-
+    @updateDateRange()
     @expanded(true)
 
   setDateRange: (dateRange) =>
