@@ -1,6 +1,6 @@
 /*!
  * knockout-daterangepicker-fb
- * version: 0.5.5
+ * version: 0.5.6
  * authors: Sensor Tower team
  * license: MIT
  * https://sensortower.github.io/daterangepicker
@@ -1120,7 +1120,17 @@
           this.startDateInput = this.startCalendar.inputDate;
           this.endDateInput = this.endCalendar.inputDate;
           this.startSubscriber = this.startDate.subscribe((newValue) => {
+            var newEnd, newStart;
+            newEnd = {};
+            newStart = newValue;
+            if (newStart.length == null) {
+              newStart = newValue[0];
+            }
             if (this.single()) {
+              if (newStart.format() === this.startCalendar.activeDate().format()) {
+                newStart = this.startCalendar.activeDate().startOf(this.period());
+                newEnd = newStart.clone().endOf(this.period());
+              }
               this.endDate(newValue.clone().endOf(this.period()));
               this.updateDateRange();
               return this.close();
@@ -1152,6 +1162,15 @@
             this.rangeSubscriber = this.dateRange.subscribe((newValue) => {
               var endDate, startDate;
               [startDate, endDate] = newValue;
+              startDate = this.startCalendar.activeDate().clone().startOf(this.period());
+              if (this.single) {
+                endDate = startDate.clone().endOf(this.period);
+                this.endDate(endDate);
+              } else {
+                if (endDate.format() !== this.endCalendar.activeDate().format()) {
+                  endDate = this.endCalendar.activeDate().clone().endOf(this.period());
+                }
+              }
               return this.callback(startDate.clone(), endDate.clone(), this.period(), this.startCalendar.firstDate(), this.endCalendar.lastDate());
             });
             this.firstSubscriber = this.startCalendar.firstDate.subscribe((newValue) => {
