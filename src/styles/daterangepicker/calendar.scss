@@ -1,3 +1,5 @@
+@import 'variables';
+
 .calendar {
   display: none;
   margin: 4px;
@@ -85,12 +87,14 @@
           }
         }
 
-        text-align: center;
-        line-height: 1;
-
-        cursor: default;
-
-        user-select: none;
+        & {
+          text-align: center;
+          line-height: 1;
+  
+          cursor: default;
+  
+          user-select: none;
+        }
 
         &.out-of-boundaries,
         &.unavailable,

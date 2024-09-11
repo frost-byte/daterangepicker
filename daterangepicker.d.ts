@@ -1,4 +1,11 @@
-import { BindingHandlers, BindingHandler, Observable, Computed, ObservableArray } from 'knockout';
+import {
+    BindingHandlers,
+    BindingHandler,
+    Observable,
+    Computed,
+    ObservableArray,
+    Subscription
+} from 'knockout';
 import { Moment, Locale } from 'moment';
 import * as $ from 'jquery';
 
@@ -46,6 +53,10 @@ declare module 'knockout' {
     }
 }
 
+export interface Dictionary<T> {
+    [Key: string]: T;
+}
+
 export interface DateRangePicker {
     (options?: Options, callback?: DateRangePickerCallback): JQuery;
     ArrayUtils?: ArrayUtils;
@@ -53,6 +64,7 @@ export interface DateRangePicker {
     MomentIterator?: MomentIterator;
     MomentUtil?: MomentUtil;
     Period?: Period;
+    DateExtent?: DateExtent;
     DateRangePickerView?: DateRangePickerView;
     DateRange?: DateRange;
     Options?: Options;
@@ -135,10 +147,9 @@ export interface DateRangeInterface {
 }
 
 export interface DateExtentInterface {
-    timeZone?: string;
     period?: string;
-    minDate?: Moment;
-    maxDate?: Moment;
+    minDate?: DateOption;
+    maxDate?: DateOption;
     startDate?: Moment;
     endDate?: Moment;
     hideWeekends?: boolean;
@@ -146,6 +157,22 @@ export interface DateExtentInterface {
 
 export class DateExtent implements DateExtentInterface {
     constructor(...options: any[])
+    period?: string;
+    minDate?: DateOption;
+    maxDate?: DateOption;
+    startDate?: Moment;
+    endDate?: Moment;
+    hideWeekends?: boolean;
+}
+
+export class DateExtentData {
+    currentExtent?: Observable<DateExtent>;
+    minDate?: Computed<ComputedDateObservable>;
+    maxDate?: Computed<ComputedDateObservable>;
+    startDate?: Computed<ComputedDateObservable>;
+    endDate?: Computed<ComputedDateObservable>;
+    hideWeekends?: Observable<Boolean>;
+    period?: Observable<Period>;
 }
 
 export class DateRange implements DateRangeInterface {
@@ -159,6 +186,14 @@ export interface DateSelection {
     momentObject: Moment;
     // ('inclusive' | 'exclusive' | 'expanded')
     selectionType: string;
+}
+
+export interface ComputedDateObservable {
+    mode?: 'inclusive' | 'exclusive';
+    minBoundary?: ComputedDateObservable;
+    maxBoundary?: ComputedDateObservable;
+    clone?(): ComputedDateObservable;
+    isWithinBoundaries?(date: Moment): boolean;
 }
 
 export enum PeriodTypes {
@@ -176,6 +211,10 @@ export interface DateOption {
 
 export class Options {
     constructor(...options: any[]);
+    firstDayOfWeek?: number;
+    allEvents?: string[];
+    periodExtents?: Dictionary<DateExtent>;
+    currentExtent?: string;
     timeZone?: string;
     minDate?: Moment | string | DateOption;
     maxDate?: Moment | string | DateOption;
@@ -190,8 +229,8 @@ export class Options {
     expanded?: boolean;
     standalone?: boolean;
     hideWeekdays?: boolean;
-    anchorElement?: JQuery<HTMLElement> | HTMLElement;
-    parentElement?: JQuery<HTMLElement> | HTMLElement;
+    anchorElement?: JQuery<HTMLElement> | HTMLElement | string;
+    parentElement?: JQuery<HTMLElement> | HTMLElement | string;
     forceUpdate?: boolean;
     customPeriodRanges?: Object;
     ranges?: DateRange[];
@@ -205,8 +244,10 @@ export class Config {
     timeZone?: Observable<string>;
     minDate?: Computed<Moment>;
     maxDate?: Computed<Moment>;
-    startDate?: Computed<Moment>;
-    endDate?: Computed<Moment>;
+    startDate?: Computed<Moment> | Computed<string>;
+    endDate?: Computed<Moment> | Computed<string>;
+    periodExtents?: Observable<Dictionary<DateExtent>>;
+    currentExtent?: Observable<DateExtent>;
     period?: Observable<string> | Observable<Period>;
     periods?: ObservableArray<string> | ObservableArray<Period>;
     single?: Observable<boolean>;
@@ -228,12 +269,16 @@ export class Config {
     callback?: (startDate: Moment, endDate: Moment, period: Period, calStartDate?: Moment, calEndDate?: Moment) => any
     firstDayOfWeek?: Observable<number>;
     extend?(obj: Object): Object;
+    changeExtent?(val: string | Period): DateExtentData;
+    findExtent?(val: string | Period): DateExtent;
+    updatePeriod?(val: any): Observable<Period>;
     _firstDayOfWeek?(val: number): Observable<number>;
-    _allEvents?(object: Object): Observable<Object>;
+    _allEvents?(val?: string[]): ObservableArray<string>;
     _timeZone?(tz: string): Observable<string>;
     _periods?(periods: Period[]): ObservableArray<Period>;
     _customPeriodRanges?(obj: any): Object;
     _period?(val: any): Observable<Period>;
+    _periodExtents?(val: any): Observable<Period>;
     _single?(isSingle: boolean): Observable<boolean>;
     _opened?(isOpened: boolean): Observable<boolean>;
     _hideWeekends?(shouldShow: boolean): Observable<boolean>;
@@ -253,7 +298,7 @@ export class Config {
         mode: string,
         minBoundary: any,
         maxBoundary: any
-    ): Computed<Moment>;
+    ): Computed<ComputedDateObservable>;
     _defaultRanges?(): DateRange[];
     _anchorElement?(elementName: string): HTMLElement;
     _parentElement?(elementName: string): HTMLElement;
@@ -268,6 +313,9 @@ export class DateRangePickerView extends Config {
         options?: Options
     );
 
+    startSubscriber: Subscription;
+    endSubscriber: Subscription;
+    rangeSubscriber: Subscription;
     periodProxy: Period;
     outsideClick: (event: Event) => Observable<boolean>;
     startCalendar: CalendarView;
@@ -275,8 +323,8 @@ export class DateRangePickerView extends Config {
     startDateInput: Computed<any>;
     endDateInput: Computed<any>;
     dateRange: Observable<any>;
-    startDate: Computed<Moment>;
-    endDate: Computed<Moment>;
+    startDate: Computed<Moment> | Computed<string>;
+    endDate: Computed<Moment> | Computed<string>;
     style: Observable<any>;
     single: Observable<boolean>;
     callback: (
@@ -299,6 +347,7 @@ export class DateRangePickerView extends Config {
     isActiveCustomPeriodRange(customPeriodRange: any): boolean;
     inputFocus(): Observable<boolean>;
     setPeriod(period: Period): Observable<boolean>;
+    setRangeFromExtent(period: Period): any;
     setDateRange(dateRange: DateRange): Observable<any>;
     setCustomPeriodRange(customPeriodRange: DateRange): Observable<any>;
     applyChanges(): Observable<any>;

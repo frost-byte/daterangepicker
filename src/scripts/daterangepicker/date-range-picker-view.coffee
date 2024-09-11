@@ -1,11 +1,13 @@
-class DateRangePickerView
+class DateRangePickerView extends Config
   constructor: (options = {}) ->
-    new Config(options).extend(@)
+    super(options)
+    # @extend(@)
 
+    @template = '
+      #= require "./../../templates/daterangepicker.html"
+    '
     @startSubscriber = {}
     @endSubscriber = {}
-    @firstSubscriber = {}
-    @lastSubscriber = {}
     @rangeSubscriber = {}
 
     @startCalendar = {}
@@ -16,34 +18,30 @@ class DateRangePickerView
 
     @setRangeFromExtent(@period())
 
-    if @anchorElement
-      wrapper = $("<div data-bind=\"stopBinding: true\"></div>").appendTo(@parentElement)
-      @containerElement = $(@constructor.template).appendTo(wrapper)
-      ko.applyBindings(@, @containerElement.get(0))
-      @anchorElement.click =>
-        @updatePosition()
-        @toggle()
-      unless @standalone()
-        $(document)
-          .on('mousedown.daterangepicker', @outsideClick)
-          .on('touchend.daterangepicker', @outsideClick)
-          .on('click.daterangepicker', '[data-toggle=dropdown]', @outsideClick)
-          .on('focusin.daterangepicker', @outsideClick)
-
     if @opened()
       @updatePosition()
 
   periodProxy: Period
 
   setRangeFromExtent: (period) =>
-    @changeExtent(period)
-    @updatePeriod(period)
 
     if @startSubscriber?.dispose
       @startSubscriber.dispose()
 
     if @endSubscriber?.dispose
       @endSubscriber.dispose()
+
+    if @rangeSubscriber?.dispose
+      @rangeSubscriber.dispose()
+
+    {
+      @currentExtent,
+      @minDate,
+      @maxDate,
+      @startDate,
+      @endDate,
+      @hideWeekends
+    } = @changeExtent(period)
 
     @startCalendar = new CalendarView(@, @startDate, 'start')
     @endCalendar = new CalendarView(@, @endDate, 'end')
@@ -58,12 +56,10 @@ class DateRangePickerView
         newStart = newValue[0]
 
       if @single()
-        if newStart.format() == @startCalendar.activeDate().format()
-          newStart = @startCalendar.activeDate().startOf(@period())
-
+        newStart = newStart.startOf(@period())
         newEnd = newStart.clone().endOf(@period())
-        @endDate(newEnd.clone().endOf(@period()))
-        @updateDateRange()
+        @endDate(newEnd)
+        @dateRange([newStart, newEnd])
         @close()
       else
         if @endDate().isSame(newValue)
@@ -77,28 +73,17 @@ class DateRangePickerView
 
     @dateRange = ko.observable([@startDate(), @endDate()])
 
-    if @rangeSubscriber?.dispose
-      @rangeSubscriber.dispose()
-
-    if @firstSubscriber?.dispose
-      @firstSubscriber.dispose()
-
-    if @lastSubscriber?.dispose
-      @lastSubscriber.dispose()
-
     if @callback
       @rangeSubscriber = @dateRange.subscribe (newValue) =>
         [startDate, endDate] = newValue
 
-        if startDate.format() == @startCalendar.activeDate().format()
-          startDate = @startCalendar.activeDate().clone().startOf(@period())
+        startDate = startDate.clone().startOf(@period())
 
-        if @single
-          endDate = startDate.clone().endOf(@period)
+        if @single()
+          endDate = startDate
+            .clone()
+            .endOf(@period())
           @endDate(endDate)
-        else
-          if endDate.format() != @endCalendar.activeDate().format()
-            endDate = @endCalendar.activeDate().clone().endOf(@period())
 
         @callback(
           startDate.clone(),
@@ -107,26 +92,35 @@ class DateRangePickerView
           @startCalendar.firstDate(),
           @endCalendar.lastDate())
 
-      @firstSubscriber = @startCalendar.firstDate.subscribe (newValue) =>
-        if not @single()
-          [startDate, endDate] = @dateRange()
-          @callback(
-            startDate.clone(),
-            endDate.clone(),
-            @period(),
-            newValue,
-            @endCalendar.lastDate()
-          )
-      @lastSubscriber = @endCalendar.lastDate.subscribe (newValue) =>
-        if not @single()
-          [startDate, endDate] = @dateRange()
-          @callback(
-            startDate.clone(), endDate.clone(), @period(), @startCalendar.firstDate(), newValue)
       if @forceUpdate
         [startDate, endDate] = @dateRange()
         @callback(
           startDate.clone(), endDate.clone(),
           @period(), @startCalendar.firstDate(), @endCalendar.lastDate())
+
+    if @anchorElement
+      existingContent = if @containerElement
+      then ko.contextFor(@containerElement.get(0))
+      else undefined
+
+      # if existingContent
+      #   pickerElement = @containerElement.get(0)
+      #   ko.cleanNode(pickerElement)
+      # else
+      unless existingContent
+        wrapper = $("<div data-bind=\"stopBinding: true\"></div>").appendTo(@parentElement)
+        @containerElement = $(@template).appendTo(wrapper)
+        @anchorElement.click =>
+          @updatePosition()
+          @toggle()
+        unless @standalone()
+          $(document)
+            .on('mousedown.daterangepicker', @outsideClick)
+            .on('touchend.daterangepicker', @outsideClick)
+            .on('click.daterangepicker', '[data-toggle=dropdown]', @outsideClick)
+            .on('focusin.daterangepicker', @outsideClick)
+
+        ko.applyBindings(@, @containerElement.get(0))
 
   getLocale: () ->
     @locale
@@ -173,9 +167,22 @@ class DateRangePickerView
   inputFocus: () ->
     @expanded(true)
 
-  setPeriod: (period) ->
-    console.log """Period changed to #{period}."""
+  triggerRangeCallback: () ->
+    if @callback
+      startDate = @startDate()
+        .clone()
+        .startOf(@period)
 
+        if @single()
+          endDate = startDate.clone()
+        else
+          endDate = @endDate().clone()
+        endDate = endDate.endOf(@period())
+
+        @callback(
+          startDate.clone(), endDate.clone(), @period(),
+          @startCalendar.firstDate(), @endCalendar.lastDate())
+  setPeriod: (period) ->
     @isCustomPeriodRangeActive(false)
     {
       @currentExtent,
@@ -186,7 +193,8 @@ class DateRangePickerView
       @hideWeekends
     } = @changeExtent(period)
     @period(period)
-    @updateDateRange()
+    @setRangeFromExtent(period)
+    @triggerRangeCallback()
     @expanded(true)
 
   setDateRange: (dateRange) =>
@@ -260,3 +268,6 @@ class DateRangePickerView
     unless event.type == 'focusin' || target.closest(@anchorElement).length ||
     target.closest(@containerElement).length || target.closest('.calendar').length
       @close()
+
+
+

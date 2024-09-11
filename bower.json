@@ -11,7 +11,7 @@
     "**/.*",
     "/website",
     "/test",
-    "/gulpfile.babel.js",
+    "/gulpfile.mjs",
     "/package.json",
     "/tsconfig.json"
   ],

@@ -1,12 +1,26 @@
-import { src, task, series, dest, watch } from 'gulp';
+import gulp from 'gulp';
+const { src, dest, series, task, watch } = gulp;
 import marked from 'marked';
 import highlight from 'highlight.js';
-import gulpLoadPlugins from 'gulp-load-plugins';
 import browserSync from 'browser-sync';
 import log from 'fancy-log';
+import gulpIf from 'gulp-if'; 
+import gulpSize from 'gulp-size';
+import useref from 'gulp-useref';
+import minifyCss from 'gulp-minify-css';
+import uglify from 'gulp-uglify';
+import fileInclude from 'gulp-file-include';
+import fs from 'fs';
 
-const $ = gulpLoadPlugins();
 const reload = browserSync.reload;
+
+const certPath = '/etc/nginx/acme.sh/dev.wiserowl.com/fullchain.pem';
+const keyPath = '/etc/nginx/acme.sh/dev.wiserowl.com/key.pem';
+
+const httpsConfig = fs.existsSync(certPath) && fs.existsSync(keyPath) ? {
+  key: keyPath,
+  cert: certPath
+} : false;
 
 marked.setOptions({
   renderer: new marked.Renderer(),
@@ -36,9 +50,9 @@ task('images', () => {
 
 task(
   'html',
-  series(['styles', 'scripts'], () => {
+  series('styles', 'scripts', () => {
     return src('website/*.html')
-      .pipe($.fileInclude({
+      .pipe(fileInclude({
         prefix: '@@',
         basepath: '@file',
         filters: {
@@ -52,15 +66,16 @@ task(
 
 task(
   'serve',
-  series(['html', 'styles', 'scripts'], () => {
+  series('html', 'styles', 'scripts', () => {
     browserSync({
       notify: false,
-      port: 9000,
+      port: 8081,
       ghostMode: {
         clicks: false,
         forms: false,
         scroll: false
       },
+      https: httpsConfig,
       server: {
         baseDir: ['.tmp', 'website'],
         routes: {
@@ -91,24 +106,23 @@ task(
 
 task(
   'build:website',
-  series(['html', 'scripts', 'styles', 'images'],
+  series('html', 'scripts', 'styles', 'images',
   () => {
-    const assets = $.useref.assets({searchPath: ['.tmp', 'website', '.']});
+    const assets = useref({searchPath: ['.tmp', 'website', '.']});
 
     return src('.tmp/*.html')
       .pipe(assets)
-      .pipe($.if('*.js', $.uglify({preserveComments: 'license'})))
-      .pipe($.if('*.css', $.minifyCss({compatibility: '*'})))
-      .pipe(assets.restore())
-      .pipe($.useref())
+      .pipe(gulpIf('*.js', uglify({ output: {comments: 'some'} })))
+      .pipe(gulpIf('*.css', minifyCss({compatibility: '*'})))
+      .pipe(useref())
       .pipe(dest('dist/website'))
-      .pipe($.size({title: 'build:website', gzip: true}));
+      .pipe(gulpSize({title: 'build:website', gzip: true}));
   })
 );
 
 task(
   'serve:website',
-  series(['build:website'], () => {
+  series('build:website', () => {
     browserSync({
       notify: false,
       port: 9000,

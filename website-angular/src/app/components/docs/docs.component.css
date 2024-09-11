@@ -1,0 +1,74 @@
+markdown {
+  text-align: left;
+}
+
+.secondary-section .container .content {
+  width: 75%;
+}
+
+.secondary-section .container aside {
+  position: fixed;
+  top: 60px;
+  background: #fff;
+  overflow: scroll;
+  padding-top: 50px;
+  padding-bottom: 50px;
+  left: 50%;
+  margin-left: 240px;
+  width: 230px;
+  text-align: left;
+}
+
+.secondary-section .container aside h3, .secondary-section .container aside li, .secondary-section .container aside ul {
+  margin: 0;
+  padding: 0;
+}
+
+.secondary-section .container aside a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.secondary-section .container aside h3 {
+  border-left: 2px solid transparent;
+}
+
+.secondary-section .container aside h3.active + ul li, .secondary-section .container aside h3.highlighted + ul li {
+  display: block;
+}
+
+.secondary-section .container aside h3.highlighted, .secondary-section .container aside h3:hover {
+  background: rgba(32, 170, 156, 0.1);
+  border-left-color: rgba(32, 170, 156, 0.2);
+}
+
+.secondary-section .container aside h3.active {
+  background: rgba(32, 170, 156, 0.1);
+  border-left-color: #20aa9c;
+}
+
+.secondary-section .container aside h3 a {
+  display: block;
+  padding: 6px 10px;
+}
+
+.secondary-section .container aside ul li {
+  display: none;
+  list-style: none;
+  border-left: 2px solid transparent;
+}
+
+.secondary-section .container aside ul li:hover {
+  background: rgba(32, 170, 156, 0.1);
+  border-left-color: rgba(32, 170, 156, 0.2);
+}
+
+.secondary-section .container aside ul li.active {
+  background: rgba(32, 170, 156, 0.1);
+  border-left-color: #20aa9c !important;
+}
+
+.secondary-section .container aside ul li a {
+  display: block;
+  padding: 6px 10px 6px 20px;
+}/*# sourceMappingURL=docs.component.css.map */

@@ -19,10 +19,6 @@
   #= require "./daterangepicker/calendar-view.coffee"
   #= require "./daterangepicker/date-range-picker-view.coffee"
 
-  DateRangePickerView.template = '
-    #= require "./../templates/daterangepicker.html"
-  '
-
   # Simplifies monkey-patching
   $.extend $.fn.daterangepicker, {
     ArrayUtils: ArrayUtils

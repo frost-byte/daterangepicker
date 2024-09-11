@@ -66,7 +66,9 @@ class CalendarView
     ArrayUtils.rotateArray(moment.weekdaysMin(), moment.localeData().firstDayOfWeek())
 
   inRange: (date) =>
-    date.isAfter(@startDate(), @period()) && date.isBefore(@endDate(), @period()) || (date.isSame(@startDate(), @period()) || date.isSame(@endDate(), @period()))
+    date.isAfter(@startDate(), @period()) &&
+    date.isBefore(@endDate(), @period()) ||
+    (date.isSame(@startDate(), @period()) || date.isSame(@endDate(), @period()))
 
   isEvent: (date) =>
     ref = @allEvents()
@@ -74,7 +76,6 @@ class CalendarView
       if (date.isSame(j, 'year') && date.isSame(j, 'month') && date.isSame(j, 'day'))
         return true
     return false
-
 
   tableValues: (date) =>
     format = @period.format()
@@ -88,9 +89,10 @@ class CalendarView
         MomentIterator.array(date, 7, 'day').map( (date) =>
           {
             html: date.format(format)
-            css:
+            css: {
               'week-day': true
-              unavailable: @cssForDate(date, true).unavailable
+              'unavailable': @cssForDate(date, true).unavailable
+            }
           }
         )
       when 'quarter'
@@ -101,9 +103,6 @@ class CalendarView
         [{
           html: "#{quarter}<br><span class='months'>#{months.join(", ")}</span>"
         }]
-
-  formatDateTemplate: (date) =>
-    { nodes: $("<div>#{@formatDate(date)}</div>").children() }
 
   eventsForDate: (date) =>
     {

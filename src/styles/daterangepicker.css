@@ -1,10 +1,3 @@
-/*!
- * knockout-daterangepicker-fb
- * version: 0.5.9
- * authors: Sensor Tower team
- * license: MIT
- * https://sensortower.github.io/daterangepicker
- */
 .daterangepicker {
   display: none;
   position: absolute;
@@ -394,4 +387,4 @@
 }
 .daterangepicker.orientation-left:not(.single) .controls {
   order: 2;
-}
+}/*# sourceMappingURL=daterangepicker.css.map */

@@ -1,12 +1,12 @@
-import {src, dest, series, task} from 'gulp';
-import gulpLoadPlugins from 'gulp-load-plugins';
-require('./build.babel');
+import gulp from 'gulp';
+const {src, dest, series, task} = gulp;
+import gulpBump from 'gulp-bump';
+import * as build from './build.babel.mjs';
 
-const $ = gulpLoadPlugins();
 
-function bump(type) {
+export function bump(type) {
   return src('./package.json')
-    .pipe($.bump({type: type}))
+    .pipe(gulpBump({type: type}))
     .pipe(dest('./'));
 }
 
@@ -15,7 +15,7 @@ task(
   series([
     () => {
       return src('./package.json')
-      .pipe($.bump({type: 'major'}))
+      .pipe(gulpBump({type: 'major'}))
       .pipe(dest('./'))
     },
     'build:min']
@@ -27,7 +27,7 @@ task(
   series([
     () => {
       return src('./package.json')
-      .pipe($.bump({type: 'minor'}))
+      .pipe(gulpBump({type: 'minor'}))
       .pipe(dest('./'))
     },
     'build:min']
@@ -39,7 +39,7 @@ task(
   series([
     () => {
       return src('./package.json')
-      .pipe($.bump({type: 'patch'}))
+      .pipe(gulpBump({type: 'patch'}))
       .pipe(dest('./'))
     },
     'build:min']

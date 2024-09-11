@@ -1,0 +1,12 @@
+.container {
+  display: flex;
+  border-top: 1px solid #ddd;
+}
+
+p {
+  flex: 1;
+}
+
+p:last-child {
+  text-align: right;
+}/*# sourceMappingURL=footer.component.css.map */
